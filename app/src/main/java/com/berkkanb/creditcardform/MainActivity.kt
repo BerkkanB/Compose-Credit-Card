@@ -3,23 +3,73 @@ package com.berkkanb.creditcardform
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import com.berkkanb.creditcardform.components.DecorationBox
+import com.berkkanb.creditcardform.components.DefaultPlaceHolder
+import com.berkkanb.creditcardform.state.CardState
+import com.berkkanb.creditcardform.state.rememberCardState
 import com.berkkanb.creditcardform.ui.theme.CreditCardFormTheme
+import com.berkkanb.creditcardform.utils.InputControlType
+import com.berkkanb.creditcardform.utils.handleCardInput
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+
+            val myCardState = rememberCardState()
+
             CreditCardFormTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    Greeting("Android")
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Column() {
+                            CreditCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.Gray, shape = RoundedCornerShape(15.dp)),
+                                cardState = myCardState
+                            )
+                            Text(text = myCardState.cardHolderName)
+                        }
+                    }
                 }
             }
         }
@@ -27,17 +77,102 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun CreditCard(
+    modifier: Modifier,
+    cardState: CardState
+) {
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    CreditCardFormTheme {
-        Greeting("Android")
+    val numberLen = 16
+
+    val focusManager = LocalFocusManager.current
+
+    var isCardFlipped by remember {
+        mutableStateOf(false)
+    }
+
+    val cardFlipState by animateFloatAsState(
+        targetValue = if (isCardFlipped) 180f else 0f,
+        animationSpec = tween(1000)
+    )
+
+    Card(
+        modifier = modifier
+            .aspectRatio(8560 / 5398f)
+            .padding(25.dp)
+            .graphicsLayer {
+                rotationY = cardFlipState
+            },
+        colors = CardDefaults.cardColors()
+    ) {
+        Row(modifier = Modifier.weight(1f)) {
+
+        }
+        BasicTextField(
+            modifier = Modifier
+                .weight(1f, true)
+                .fillMaxWidth(),
+            value = cardState.cardNumber,
+            onValueChange = { input ->
+                handleCardInput(InputControlType.CardNumberInput(input) { cardState.setCardNumber(it) })
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(onNext = {
+                focusManager.moveFocus(FocusDirection.Down)
+            }),
+            decorationBox = { DecorationBox(cardState.cardNumber, numberLen) })
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column() {
+                Text(text = "Card Holder Name")
+                BasicTextField(
+                    value = cardState.cardHolderName,
+                    onValueChange = { input ->
+                        handleCardInput(InputControlType.HolderNameInput(input) {
+                            cardState.setCardHolderName(
+                                it
+                            )
+                        })
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = {
+                        focusManager.moveFocus(FocusDirection.Next)
+                    }),
+                    decorationBox = {
+                        DefaultPlaceHolder(
+                            label = "Berkkan Butun",
+                            actualValue = cardState.cardHolderName
+                        )
+                        it()
+                    }
+                )
+            }
+            Column() {
+                Text(text = "Exp. Date")
+                BasicTextField(
+                    value = cardState.expiryDate,
+                    onValueChange = { input ->
+                        handleCardInput(InputControlType.ExpiryDateInput(input) {
+                            cardState.setExpiryDate(
+                                it
+                            )
+                        })
+
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = {
+                        isCardFlipped = true
+                    }),
+                    decorationBox = {
+                        DefaultPlaceHolder(label = "12/25", actualValue = cardState.expiryDate)
+                        it()
+                    })
+            }
+        }
     }
 }
