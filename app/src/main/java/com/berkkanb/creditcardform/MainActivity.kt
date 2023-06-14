@@ -9,23 +9,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.rotationMatrix
 import com.berkkanb.creditcardform.components.DecorationBox
 import com.berkkanb.creditcardform.components.DefaultPlaceHolder
 import com.berkkanb.creditcardform.state.CardState
@@ -63,8 +64,7 @@ class MainActivity : ComponentActivity() {
                         Column() {
                             CreditCard(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color.Gray, shape = RoundedCornerShape(15.dp)),
+                                    .fillMaxWidth(),
                                 cardState = myCardState
                             )
                             Text(text = myCardState.cardHolderName)
@@ -82,10 +82,6 @@ fun CreditCard(
     cardState: CardState
 ) {
 
-    val numberLen = 16
-
-    val focusManager = LocalFocusManager.current
-
     var isCardFlipped by remember {
         mutableStateOf(false)
     }
@@ -95,84 +91,108 @@ fun CreditCard(
         animationSpec = tween(1000)
     )
 
+    val changeLayout = remember {
+        derivedStateOf {
+            cardFlipState > 90f
+        }
+    }
+
     Card(
         modifier = modifier
             .aspectRatio(8560 / 5398f)
-            .padding(25.dp)
             .graphicsLayer {
                 rotationY = cardFlipState
             },
         colors = CardDefaults.cardColors()
     ) {
-        Row(modifier = Modifier.weight(1f)) {
-
+        if (changeLayout.value.not()) {
+            CreditCardFrontFace(cardState = cardState, setIsCardFlipped = { isCardFlipped = it })
+        } else {
+            Text(modifier = Modifier.graphicsLayer {
+                scaleX = -1f
+            }, text = "Arka Yüz")
         }
-        BasicTextField(
-            modifier = Modifier
-                .weight(1f, true)
-                .fillMaxWidth(),
-            value = cardState.cardNumber,
-            onValueChange = { input ->
-                handleCardInput(InputControlType.CardNumberInput(input) { cardState.setCardNumber(it) })
-            },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(onNext = {
-                focusManager.moveFocus(FocusDirection.Down)
-            }),
-            decorationBox = { DecorationBox(cardState.cardNumber, numberLen) })
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column() {
-                Text(text = "Card Holder Name")
-                BasicTextField(
-                    value = cardState.cardHolderName,
-                    onValueChange = { input ->
-                        handleCardInput(InputControlType.HolderNameInput(input) {
-                            cardState.setCardHolderName(
-                                it
-                            )
-                        })
-                    },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(onNext = {
-                        focusManager.moveFocus(FocusDirection.Next)
-                    }),
-                    decorationBox = {
-                        DefaultPlaceHolder(
-                            label = "Berkkan Butun",
-                            actualValue = cardState.cardHolderName
-                        )
-                        it()
-                    }
-                )
-            }
-            Column() {
-                Text(text = "Exp. Date")
-                BasicTextField(
-                    value = cardState.expiryDate,
-                    onValueChange = { input ->
-                        handleCardInput(InputControlType.ExpiryDateInput(input) {
-                            cardState.setExpiryDate(
-                                it
-                            )
-                        })
+    }
+}
 
-                    },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(onNext = {
-                        isCardFlipped = true
-                    }),
-                    decorationBox = {
-                        DefaultPlaceHolder(label = "12/25", actualValue = cardState.expiryDate)
-                        it()
+@Composable
+fun ColumnScope.CreditCardFrontFace(
+    cardState: CardState,
+    setIsCardFlipped: (state: Boolean) -> Unit
+) {
+
+    val numberLen = 16
+
+    val focusManager = LocalFocusManager.current
+
+    Row(modifier = Modifier.weight(1f)) {
+
+    }
+    BasicTextField(
+        modifier = Modifier
+            .weight(1f, true)
+            .fillMaxWidth(),
+        value = cardState.cardNumber,
+        onValueChange = { input ->
+            handleCardInput(InputControlType.CardNumberInput(input) { cardState.setCardNumber(it) })
+        },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Next
+        ),
+        keyboardActions = KeyboardActions(onNext = {
+            focusManager.moveFocus(FocusDirection.Down)
+        }),
+        decorationBox = { DecorationBox(cardState.cardNumber, numberLen) })
+    Row(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column() {
+            Text(text = "Card Holder Name")
+            BasicTextField(
+                value = cardState.cardHolderName,
+                onValueChange = { input ->
+                    handleCardInput(InputControlType.HolderNameInput(input) {
+                        cardState.setCardHolderName(
+                            it
+                        )
                     })
-            }
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = {
+                    focusManager.moveFocus(FocusDirection.Next)
+                }),
+                decorationBox = {
+                    DefaultPlaceHolder(
+                        label = "Berkkan Butun",
+                        actualValue = cardState.cardHolderName
+                    )
+                    it()
+                }
+            )
+        }
+        Column() {
+            Text(text = "Exp. Date")
+            BasicTextField(
+                value = cardState.expiryDate,
+                onValueChange = { input ->
+                    handleCardInput(InputControlType.ExpiryDateInput(input) {
+                        cardState.setExpiryDate(
+                            it
+                        )
+                    })
+
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = {
+                    setIsCardFlipped.invoke(true)
+                }),
+                decorationBox = {
+                    DefaultPlaceHolder(label = "12/25", actualValue = cardState.expiryDate)
+                    it()
+                })
         }
     }
 }

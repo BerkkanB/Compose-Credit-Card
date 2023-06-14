@@ -3,6 +3,8 @@ package com.berkkanb.creditcardform.components
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -26,19 +28,19 @@ fun DecorationBox(
 ) {
     Row() {
         for (i in 0 until numberLen) {
-            val char = if (i < input.length) input[i].toString() else ""
+            val char = if (i < input.length) input[i].toString() else "*"
             Column(modifier = Modifier.weight(4f), horizontalAlignment = Alignment.CenterHorizontally) {
                 AnimatedContent(targetState = char, transitionSpec = {
                     ContentTransform(
                         targetContentEnter = slideInVertically(initialOffsetY = {it/2}),
-                        initialContentExit = slideOutVertically(targetOffsetY = { it / 2 }),
-                        sizeTransform = null
+                        initialContentExit = fadeOut(),
+                        sizeTransform = SizeTransform()
                     )
                 }) { TextValue ->
                     Text(text = TextValue)
                 }
                 Spacer(modifier = Modifier
-                    .height(1.dp)
+                    .height(0.dp) // TODO
                     .fillMaxWidth()
                     .background(Color.Black))
             }
